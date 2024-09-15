@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veg Shop</title>
+    <style>
+        table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        button {
+            margin-left: 10px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js" integrity="sha512-DdX/YwF5e41Ok+AI81HI8f5/5UsoxCVT9GKYZRIzpLxb8Twz4ZwPPX+jQMwMhNQ9b5+zDEefc+dcvQoPWGNZ3g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+
+    <h1>Veg Shop</h1>
+
+    <!-- Form for adding new vegetables -->
+    <form id="addProductForm">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" value="Onion"><br><br>
+
+        <label for="price">Price:</label>
+        <input type="number" id="price" name="price" value="50"><br><br>
+
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" value="10"><br><br>
+
+        <button type="button" onclick="addToShop()">ADD TO SHOP</button>
+    </form>
+
+    <!-- Table for listing vegetables -->
+    <table id="productTable" border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price (Rs)</th>
+                <th>Quantity (KG)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="productList">
+            <!-- Dynamic content will be added here -->
+        </tbody>
+    </table>
+
+    <h2>Total : <span id="total">0</span></h2>
+
+    <script>
+        // Function to add a product to the shop
+        function addToShop() {
+    const name = document.getElementById('name').value;
+    const price = parseFloat(document.getElementById('price').value);
+    const quantity = parseFloat(document.getElementById('quantity').value);
+
+    if (name && price > 0 && quantity > 0) {
+        const productTable = document.getElementById('productList');
+        const row = productTable.insertRow();
+
+        // Insert columns
+        row.insertCell(0).innerText = name;
+        row.insertCell(1).innerText = 'RS: ' + price;
+        row.insertCell(2).innerText = quantity + ' KG';
+
+        // Insert Buy and Delete buttons
+        const actionCell = row.insertCell(3);
+        actionCell.innerHTML = `
+            <input type="number" class="reduce-quantity" value="0" min="0" max="${quantity}">
+            <button onclick="buyProduct(this, ${price}, ${quantity})">Buy</button>
+            <button onclick="deleteProduct(this, ${price}, ${quantity})">Delete</button>
+        `;
+
+        // Update total entries
+        updateTotal();
+
+        // Save to CRUD using Axios POST request
+        axios.post('https://crudcrud.com/api/0243b35f873f4d19bbe8633064d6b54d/VegShop', { name, price, quantity })
+            .then(response => {
+                console.log('Product added to CRUD:', response.data);
+            })
+            .catch(error => {
+                console.error('Error adding product to CRUD:', error);
+            });
+    } else {
+        alert('Please enter valid product details.');
+    }
+}
+
+        // Function to buy a product and reduce its quantity
+        function buyProduct(button, price, maxQuantity) {
+            const row = button.closest('tr');
+            const input = row.querySelector('.reduce-quantity');
+            const reduceAmount = parseFloat(input.value);
+
+            if (reduceAmount > 0 && reduceAmount <= maxQuantity) {
+                let currentQuantity = parseFloat(row.cells[2].innerText);
+                const newQuantity = currentQuantity - reduceAmount;
+
+                // Update the quantity
+                row.cells[2].innerText = newQuantity + ' KG';
+
+                // If quantity becomes 0, just update it to '0 KG', do not remove the row
+                if (newQuantity <= 0) {
+                    row.cells[2].innerText = '0 KG';
+                    input.max = 0;  // Disable further reduction as quantity is 0
+                } else {
+                    input.max = newQuantity;  // Update the maximum reduction available
+                }
+            } else {
+                alert('Invalid quantity entered.');
+            }
+        }
+
+
+        // Function to fetch products from CRUD
+function fetchProducts() {
+    axios.get('https://crudcrud.com/api/0243b35f873f4d19bbe8633064d6b54d/VegShop/66e660d5fe837603e816c17f')
+        .then(response => {
+            const products = response.data;
+
+            products.forEach(product => {
+                const { name, price, quantity } = product;
+
+                const productTable = document.getElementById('productList');
+                const row = productTable.insertRow();
+
+                // Insert columns
+                row.insertCell(0).innerText = name;
+                row.insertCell(1).innerText = 'RS: ' + price;
+                row.insertCell(2).innerText = quantity + ' KG';
+
+                // Insert Buy and Delete buttons
+                const actionCell = row.insertCell(3);
+                actionCell.innerHTML = `
+                    <input type="number" class="reduce-quantity" value="0" min="0" max="${quantity}">
+                    <button onclick="buyProduct(this, ${price}, ${quantity})">Buy</button>
+                    <button onclick="deleteProduct(this, ${price}, ${quantity})">Delete</button>
+                `;
+            });
+
+            // Update total entries
+            updateTotal();
+        })
+        .catch(error => {
+            console.error('Error fetching products from CRUD:', error);
+        });
+}
+
+// Call fetchProducts() when the page loads
+window.onload = fetchProducts;
+
+        // Function to delete a product from the shop
+        function deleteProduct(button, price, quantity) {
+            const row = button.closest('tr');
+            row.remove();
+
+            // Update total entries after removing the row
+            updateTotal();
+        }
+
+        // Function to update the total number of entries
+        function updateTotal() {
+            const productTable = document.getElementById('productList');
+            const totalEntries = productTable.rows.length;
+            document.getElementById('total').innerText = totalEntries;
+        }
+    </script>
+
+</body>
+</html>
